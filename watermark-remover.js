@@ -1,6 +1,10 @@
+import "dotenv/config";
 import puppeteer from "puppeteer-core";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
+
+const WIT_AI_KEY = process.env.WIT_AI_KEY;
 
 const BASE_DIR = "/Users/fatality/Downloads/photo";
 const PHOTO_DIR = path.join(BASE_DIR, "wm");
@@ -25,19 +29,15 @@ function getPhotoFiles() {
     .map((file) => path.join(PHOTO_DIR, file));
 }
 
-async function waitForButtonByText(page, text, timeout = 30000) {
-  await page.waitForFunction(
-    (t) => [...document.querySelectorAll("button")].some((b) => b.textContent.includes(t)),
-    { timeout },
-    text,
-  );
-}
-
-async function clickButtonByText(page, text) {
-  await page.evaluate(
-    (t) => [...document.querySelectorAll("button")].find((b) => b.textContent.includes(t))?.click(),
-    text,
-  );
+async function waitForSelectorWithCaptchaCheck(page, selector, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  while (true) {
+    const found = await page.$(selector);
+    if (found) return;
+    if (Date.now() > deadline) throw new Error(`Timeout waiting for selector: ${selector}`);
+    if (await isCaptchaVisible(page)) await waitIfCaptcha(page);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
 }
 
 async function isCaptchaVisible(page) {
@@ -57,24 +57,78 @@ async function isCaptchaVisible(page) {
   }
 }
 
+async function solveCaptchaAudio(page) {
+  // Find the bframe iframe element in the page
+  const bframeElement = await page.$('iframe[src*="bframe"]');
+  if (!bframeElement) return false;
+
+  // Get the frame object for the bframe
+  const frames = page.frames();
+  const bframe = frames.find((f) => f.url().includes("bframe"));
+  if (!bframe) return false;
+
+  try {
+    // Click the audio button inside the challenge
+    const audioBtn = await bframe.waitForSelector("#recaptcha-audio-button", { timeout: 5000 });
+    await audioBtn.click();
+
+    // Get the audio source URL
+    const audioSrc = await bframe.waitForFunction(
+      () => document.querySelector(".rc-audiochallenge-tdownload-link")?.href,
+      { timeout: 10000 },
+    );
+    const audioUrl = await audioSrc.jsonValue();
+    if (!audioUrl) return false;
+
+    // Fetch the audio and send to Wit.ai
+    const audioResp = await axios.get(audioUrl, { responseType: "arraybuffer" });
+    const witResp = await axios.post(
+      "https://api.wit.ai/speech?v=20220622",
+      audioResp.data,
+      { headers: { Authorization: `Bearer ${WIT_AI_KEY}`, "Content-Type": "audio/mpeg3" } },
+    );
+    const raw = typeof witResp.data === "string" ? witResp.data : JSON.stringify(witResp.data);
+    const parsed = JSON.parse(raw.split("\r\n").at(-1) || "{}");
+    const text = parsed?.text;
+    if (!text) return false;
+
+    console.log(`  🔊 Wit.ai: "${text}"`);
+
+    // Type the answer and submit
+    const input = await bframe.waitForSelector("#audio-response", { timeout: 5000 });
+    await input.type(text);
+    const verifyBtn = await bframe.$('#recaptcha-verify-button');
+    await verifyBtn.click();
+
+    // Wait for challenge to disappear
+    await new Promise((r) => setTimeout(r, 3000));
+    return !await isCaptchaVisible(page);
+  } catch (e) {
+    console.log(`  ⚠️  Аудио-решение не удалось: ${e.message}`);
+    return false;
+  }
+}
+
 async function waitIfCaptcha(page) {
   if (!await isCaptchaVisible(page)) return;
-  console.log("  ⚠️  Капча! Решите её в браузере, скрипт продолжит автоматически...");
+  console.log("  ⚠️  Капча! Пытаюсь решить через аудио...");
+  const solved = await solveCaptchaAudio(page);
+  if (solved) {
+    console.log("  ✅ Капча решена автоматически!");
+    return;
+  }
+  console.log("  ⚠️  Авто-решение не удалось, жду ручного...");
   while (await isCaptchaVisible(page)) {
     await new Promise((r) => setTimeout(r, 1500));
   }
-  console.log("  ✅ Капча решена, продолжаю...");
+  console.log("  ✅ Капча решена вручную, продолжаю...");
 }
 
 async function waitForResponseWithCaptchaCheck(page, responsePromise) {
   let done = false;
   responsePromise.then(() => { done = true; }).catch(() => { done = true; });
   while (!done) {
-    if (await isCaptchaVisible(page)) {
-      console.log("  ⚠️  Капча! Решите её в браузере, скрипт продолжит автоматически...");
-      while (await isCaptchaVisible(page)) await new Promise((r) => setTimeout(r, 1500));
-      console.log("  ✅ Капча решена, продолжаю...");
-    }
+    if (await isCaptchaVisible(page)) await waitIfCaptcha(page);
     if (!done) await new Promise((r) => setTimeout(r, 2000));
   }
   return responsePromise;
@@ -105,23 +159,36 @@ async function processPhoto(browser, photoPath, index, total) {
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
     await page.reload({ waitUntil: "networkidle2", timeout: 30000 });
 
+    // Switch to English if site opened in another language
+    const isEnglish = await page.evaluate(() => !document.querySelector('[class*="LanguageSwitcher"]') ||
+      document.querySelector('[class*="LanguageSwitcher__ButtonDropdown"]')?.textContent.trim() === "English"
+    );
+    if (!isEnglish) {
+      await page.click('[class*="LanguageSwitcher__ButtonDropdown"]');
+      await new Promise((r) => setTimeout(r, 1000));
+      await page.evaluate(() => {
+        [...document.querySelectorAll("a,button,li,span")].find((el) => el.textContent.trim() === "English")?.click();
+      });
+      await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 10000 }).catch(() => {});
+    }
+
     await waitIfCaptcha(page);
 
     console.log("  📤 Загружаю файл...");
-    await waitForButtonByText(page, "Upload", 10000);
-    await clickButtonByText(page, "Upload");
+    await page.waitForSelector('[data-test-id="upload-btn"], #UploadImage__HomePage', { timeout: 10000 });
+    await page.click('[data-test-id="upload-btn"], #UploadImage__HomePage');
 
     const fileInput = await page.waitForSelector("#uploadImage", { timeout: 5000 });
     await fileInput.uploadFile(photoPath);
 
     console.log("  ⏳ Жду перехода на /upload...");
-    await page.waitForFunction(() => window.location.pathname === "/upload", {
+    await page.waitForFunction(() => window.location.pathname.endsWith("/upload"), {
       timeout: 3 * 60 * 1000,
     });
     await waitIfCaptcha(page);
 
     console.log("  🚀 Запускаю обработку...");
-    await waitForButtonByText(page, "Remove Watermark From Image", 5 * 60 * 1000);
+    await waitForSelectorWithCaptchaCheck(page, '[class*="OutputCard__TransformButton"]', 5 * 60 * 1000);
 
     const apiResponse = page.waitForResponse(
       (res) => res.url().includes("api.watermarkremover.io/service/public/transformation/v1.0/predictions/wm/remove"),
@@ -129,14 +196,14 @@ async function processPhoto(browser, photoPath, index, total) {
     );
     apiResponse.catch(() => {});
 
-    await clickButtonByText(page, "Remove Watermark From Image");
+    await page.click('[class*="OutputCard__TransformButton"]');
 
     console.log("  ⏳ Жду ответа API...");
     await waitForResponseWithCaptchaCheck(page, apiResponse);
     await waitIfCaptcha(page);
 
-    await waitForButtonByText(page, "Download Image", 2 * 60 * 1000);
-    await clickButtonByText(page, "Download Image");
+    await waitForSelectorWithCaptchaCheck(page, '[data-test-id="download-btn"]', 2 * 60 * 1000);
+    await page.click('[data-test-id="download-btn"]');
 
     console.log("  💾 Жду файл...");
     const deadline = Date.now() + 30000;

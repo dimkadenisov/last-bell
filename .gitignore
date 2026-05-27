@@ -8,5 +8,7 @@ doc.yml
 
 node_modules
 
+.env
+
 clean
 wm
