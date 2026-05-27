@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
+*.key
+*.cert
+doc.json
+doc.yml
+
+node_modules
+
+clean
+wm
