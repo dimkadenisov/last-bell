@@ -1,16 +1,16 @@
-import { readdirSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readdirSync, writeFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const previewDir = join(__dirname, 'preview');
+const previewDir = join(__dirname, "preview");
 
-const REPO = 'dimkadenisov/last-bell';
-const BRANCH = 'main';
+const REPO = "dimkadenisov/last-bell";
+const BRANCH = "main";
 const LFS_BASE = `https://media.githubusercontent.com/media/${REPO}/${BRANCH}/clean`;
 
 const photos = readdirSync(previewDir)
-  .filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f))
+  .filter((f) => /\.(jpe?g|png|webp|gif)$/i.test(f))
   .sort();
 
 const html = `<!DOCTYPE html>
@@ -159,7 +159,7 @@ const html = `<!DOCTYPE html>
 
 <div class="header">
   <div>
-    <h1>Photo Gallery</h1>
+    <h1>Последний звонок</h1>
     <div class="count">${photos.length} photos</div>
   </div>
   <span>Внимание! Водяные знаки удалялись автоматически с использованием AI. Могут быть артефакты. Качество изображений может быть ухудшено, однако его будет достаточно для публикации в социальных сетях. Если что-то не так — напишите Денисовой Маргарите.</span>
@@ -237,22 +237,38 @@ function updateLb() {
   document.getElementById('lbCounter').textContent = (current + 1) + ' / ' + photos.length;
 }
 
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
 async function downloadCurrent() {
-  const btn = document.getElementById('lbDl');
   const name = photos[current];
+  const url = LFS_BASE + '/' + name;
+  if (isIOS) {
+    window.open(url, '_blank');
+    showToast('Зажмите фото → «Сохранить в "Фото"»');
+    return;
+  }
+  const btn = document.getElementById('lbDl');
   btn.disabled = true;
   try {
-    const resp = await fetch(LFS_BASE + '/' + name);
+    const resp = await fetch(url);
     const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = blobUrl;
     a.download = name;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(blobUrl);
   } finally {
     btn.disabled = false;
   }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:8px;font-size:0.85rem;z-index:2000;pointer-events:none;white-space:nowrap';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }
 
 document.addEventListener('keydown', e => {
@@ -313,5 +329,5 @@ async function downloadAll() {
 </body>
 </html>`;
 
-writeFileSync(join(__dirname, 'index.html'), html);
+writeFileSync(join(__dirname, "index.html"), html);
 console.log(`Generated index.html with ${photos.length} photos`);
