@@ -162,6 +162,7 @@ const html = `<!DOCTYPE html>
     <h1>Photo Gallery</h1>
     <div class="count">${photos.length} photos</div>
   </div>
+  <span>Внимание! Водяные знаки удалялись автоматически с использованием AI. Могут быть артефакты. Качество изображений может быть ухудшено, однако его будет достаточно для публикации в социальных сетях. Если что-то не так — напишите Денисовой Маргарите.</span>
   <button class="btn btn-primary" id="dlAll" onclick="downloadAll()">
     <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     Скачать все (оригиналы)
@@ -178,10 +179,10 @@ const html = `<!DOCTYPE html>
     <span class="lb-counter" id="lbCounter"></span>
     <span class="lb-filename" id="lbFilename"></span>
     <div class="lb-actions">
-      <a class="btn btn-ghost" id="lbDl" download>
+      <button class="btn btn-ghost" id="lbDl" onclick="downloadCurrent()">
         <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Скачать оригинал
-      </a>
+      </button>
       <button class="btn btn-ghost" onclick="closeLb()">✕</button>
     </div>
   </div>
@@ -234,9 +235,24 @@ function updateLb() {
   document.getElementById('lbImg').src = 'preview/' + name;
   document.getElementById('lbFilename').textContent = name;
   document.getElementById('lbCounter').textContent = (current + 1) + ' / ' + photos.length;
-  const dl = document.getElementById('lbDl');
-  dl.href = LFS_BASE + '/' + name;
-  dl.download = name;
+}
+
+async function downloadCurrent() {
+  const btn = document.getElementById('lbDl');
+  const name = photos[current];
+  btn.disabled = true;
+  try {
+    const resp = await fetch(LFS_BASE + '/' + name);
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 document.addEventListener('keydown', e => {
