@@ -117,11 +117,7 @@ async function waitIfCaptcha(page) {
     console.log("  ✅ Капча решена автоматически!");
     return;
   }
-  console.log("  ⚠️  Авто-решение не удалось, жду ручного...");
-  while (await isCaptchaVisible(page)) {
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  console.log("  ✅ Капча решена вручную, продолжаю...");
+  throw new Error("Капча не решена автоматически, пропускаю");
 }
 
 async function waitForResponseWithCaptchaCheck(page, responsePromise) {
@@ -225,7 +221,7 @@ async function processPhoto(browser, photoPath, index, total) {
     return true;
   } catch (error) {
     console.error(`  ❌ Ошибка: ${error.message}`);
-    return false;
+    return error.message.includes("Капча") ? "captcha" : false;
   } finally {
     await page.close();
   }
@@ -256,13 +252,26 @@ async function main() {
 
   let successCount = 0;
   let cursor = 0;
+  let captchaStreak = 0;
 
   try {
     while (true) {
       const i = cursor++;
       if (i >= photos.length) break;
-      const success = await processPhoto(browser, photos[i], i + 1, photos.length);
-      if (success) successCount++;
+      const result = await processPhoto(browser, photos[i], i + 1, photos.length);
+      if (result === true) {
+        successCount++;
+        captchaStreak = 0;
+      } else if (result === "captcha") {
+        captchaStreak++;
+        if (captchaStreak >= 3) {
+          console.log("  🕐 3 капчи подряд — жду 5 минут...");
+          await new Promise((r) => setTimeout(r, 5 * 60 * 1000));
+          captchaStreak = 0;
+        }
+      } else {
+        captchaStreak = 0;
+      }
       await randomDelay();
     }
 
