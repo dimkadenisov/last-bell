@@ -59,8 +59,16 @@
     .grid a:hover img { transform: scale(1.04); }
 
     /* PhotoSwipe download button */
-    .pswp__button--download { background: none; }
-    .pswp__button--download svg { width: 24px; height: 24px; }
+    .pswp__button--download-button {
+      width: auto !important;
+      padding: 0 16px !important;
+      display: flex !important;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: #fff;
+    }
+    .pswp__button--download-button svg { width: 16px; height: 16px; stroke: #fff; flex-shrink: 0; }
 
     .toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
@@ -125,7 +133,7 @@ lightbox.on('uiRegister', () => {
     name: 'download-button',
     order: 8,
     isButton: true,
-    html: '<svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+    html: '<svg fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Скачать оригинал',
     onClick: (e, el, pswp) => downloadPhoto(photos[pswp.currIndex]),
   });
 });
