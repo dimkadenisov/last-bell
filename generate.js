@@ -3,9 +3,13 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const cleanDir = join(__dirname, 'clean');
+const previewDir = join(__dirname, 'preview');
 
-const photos = readdirSync(cleanDir)
+const REPO = 'dimkadenisov/last-bell';
+const BRANCH = 'main';
+const LFS_BASE = `https://media.githubusercontent.com/media/${REPO}/${BRANCH}/clean`;
+
+const photos = readdirSync(previewDir)
   .filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f))
   .sort();
 
@@ -160,7 +164,7 @@ const html = `<!DOCTYPE html>
   </div>
   <button class="btn btn-primary" id="dlAll" onclick="downloadAll()">
     <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    Скачать все
+    Скачать все (оригиналы)
   </button>
 </div>
 
@@ -176,7 +180,7 @@ const html = `<!DOCTYPE html>
     <div class="lb-actions">
       <a class="btn btn-ghost" id="lbDl" download>
         <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Скачать
+        Скачать оригинал
       </a>
       <button class="btn btn-ghost" onclick="closeLb()">✕</button>
     </div>
@@ -190,9 +194,9 @@ const html = `<!DOCTYPE html>
 
 <script>
 const photos = ${JSON.stringify(photos)};
+const LFS_BASE = '${LFS_BASE}';
 let current = 0;
 
-// Build grid with lazy loading
 const grid = document.getElementById('grid');
 photos.forEach((name, i) => {
   const div = document.createElement('div');
@@ -201,14 +205,13 @@ photos.forEach((name, i) => {
   const img = document.createElement('img');
   img.loading = 'lazy';
   img.alt = name;
-  img.src = 'clean/' + name;
+  img.src = 'preview/' + name;
   img.onload = () => img.classList.add('loaded');
   img.onerror = () => img.classList.add('loaded');
   div.appendChild(img);
   grid.appendChild(div);
 });
 
-// Lightbox
 function openLb(i) {
   current = i;
   updateLb();
@@ -228,12 +231,11 @@ function navigate(dir) {
 }
 function updateLb() {
   const name = photos[current];
-  const src = 'clean/' + name;
-  document.getElementById('lbImg').src = src;
+  document.getElementById('lbImg').src = 'preview/' + name;
   document.getElementById('lbFilename').textContent = name;
   document.getElementById('lbCounter').textContent = (current + 1) + ' / ' + photos.length;
   const dl = document.getElementById('lbDl');
-  dl.href = src;
+  dl.href = LFS_BASE + '/' + name;
   dl.download = name;
 }
 
@@ -249,7 +251,6 @@ document.getElementById('lb').addEventListener('click', e => {
   if (e.target === e.currentTarget || e.target.classList.contains('lb-body')) closeLb();
 });
 
-// Download all as ZIP
 async function downloadAll() {
   const btn = document.getElementById('dlAll');
   const bar = document.getElementById('progressBar');
@@ -269,7 +270,7 @@ async function downloadAll() {
 
   await Promise.all(photos.map(async name => {
     try {
-      const resp = await fetch('clean/' + name);
+      const resp = await fetch(LFS_BASE + '/' + name);
       const blob = await resp.blob();
       folder.file(name, blob);
     } catch {}
@@ -288,7 +289,7 @@ async function downloadAll() {
   URL.revokeObjectURL(url);
 
   btn.disabled = false;
-  btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Скачать все';
+  btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Скачать все (оригиналы)';
   bar.classList.remove('active');
   fill.style.width = '0%';
 }
