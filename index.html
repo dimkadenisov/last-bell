@@ -1,207 +1,331 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Последний звонок</title>
-  <link rel="stylesheet" href="https://unpkg.com/photoswipe@5/dist/photoswipe.css" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0f0f0f; color: #e0e0e0; font-family: system-ui, sans-serif; min-height: 100vh; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Последний звонок</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/photoswipe@5/dist/photoswipe.css"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #0f0f0f;
+        color: #e0e0e0;
+        font-family: system-ui, sans-serif;
+        min-height: 100vh;
+      }
 
-    .header {
-      padding: 24px 32px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-      border-bottom: 1px solid #222;
-    }
-    .header h1 { font-size: 1.2rem; font-weight: 500; color: #aaa; }
-    .header .count { font-size: 0.9rem; color: #555; }
-    .header .notice { font-size: 0.8rem; color: #666; max-width: 480px; line-height: 1.4; }
+      .header {
+        padding: 24px 32px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #222;
+      }
+      .header h1 {
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: #aaa;
+      }
+      .header .count {
+        font-size: 0.9rem;
+        color: #555;
+      }
+      .header .notice {
+        font-size: 0.8rem;
+        color: #666;
+        max-width: 480px;
+        line-height: 1.4;
+      }
 
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: opacity 0.15s;
-      white-space: nowrap;
-    }
-    .btn:hover { opacity: 0.8; }
-    .btn-primary { background: #fff; color: #0f0f0f; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: opacity 0.15s;
+        white-space: nowrap;
+      }
+      .btn:hover {
+        opacity: 0.8;
+      }
+      .btn-primary {
+        background: #fff;
+        color: #0f0f0f;
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
 
-    .progress-bar { display: none; width: 100%; height: 3px; background: #222; }
-    .progress-bar.active { display: block; }
-    .progress-fill { height: 100%; background: #fff; transition: width 0.1s; width: 0%; }
+      .progress-bar {
+        display: none;
+        width: 100%;
+        height: 3px;
+        background: #222;
+      }
+      .progress-bar.active {
+        display: block;
+      }
+      .progress-fill {
+        height: 100%;
+        background: #fff;
+        transition: width 0.1s;
+        width: 0%;
+      }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 4px;
-      padding: 4px;
-    }
-    .grid a { display: block; aspect-ratio: 3/2; overflow: hidden; background: #1a1a1a; }
-    .grid a img {
-      width: 100%; height: 100%; object-fit: cover;
-      transition: transform 0.2s, opacity 0.3s;
-      opacity: 0;
-    }
-    .grid a img.loaded { opacity: 1; }
-    .grid a:hover img { transform: scale(1.04); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 4px;
+        padding: 4px;
+      }
+      .grid a {
+        display: block;
+        aspect-ratio: 3/2;
+        overflow: hidden;
+        background: #1a1a1a;
+      }
+      .grid a img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition:
+          transform 0.2s,
+          opacity 0.3s;
+        opacity: 0;
+      }
+      .grid a img.loaded {
+        opacity: 1;
+      }
+      .grid a:hover img {
+        transform: scale(1.04);
+      }
 
-    /* PhotoSwipe download button */
-    .pswp__button--download-button {
-      width: auto !important;
-      padding: 0 16px !important;
-      display: flex !important;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-      color: #fff;
-    }
-    .pswp__button--download-button svg { width: 16px; height: 16px; stroke: #fff; flex-shrink: 0; }
+      /* PhotoSwipe overrides */
+      .pswp {
+        --pswp-placeholder-color: transparent;
+      }
+      .pswp__img--placeholder {
+        background: transparent !important;
+      }
 
-    .toast {
-      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
-      background: #333; color: #fff; padding: 10px 18px; border-radius: 8px;
-      font-size: 0.85rem; z-index: 9999; pointer-events: none; white-space: nowrap;
-    }
-  </style>
-</head>
-<body>
+      /* PhotoSwipe download button */
+      .pswp__button--download-button {
+        width: auto !important;
+        padding: 0 16px !important;
+        display: flex !important;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        color: #fff;
+      }
+      .pswp__button--download-button svg {
+        width: 16px;
+        height: 16px;
+        stroke: #fff;
+        flex-shrink: 0;
+      }
 
-<div class="header">
-  <div>
-    <h1>Последний звонок</h1>
-    <div class="count" id="count"></div>
-  </div>
-  <span class="notice">Внимание! Водяные знаки удалялись автоматически с использованием AI. Могут быть артефакты. Качество изображений может быть ухудшено, однако его будет достаточно для публикации в социальных сетях. Если что-то не так — напишите Денисовой Маргарите.</span>
-  <button class="btn btn-primary" id="dlAll">
-    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    Скачать все (оригиналы)
-  </button>
-</div>
+      .pswp__img {
+        object-fit: contain;
+      }
 
-<div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-<div id="gallery" class="grid"></div>
+      .toast {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        z-index: 9999;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>Последний звонок</h1>
+        <div class="count" id="count"></div>
+      </div>
+      <span class="notice"
+        >Внимание! Водяные знаки удалялись автоматически с использованием AI.
+        Могут быть артефакты. Качество изображений может быть ухудшено, однако
+        его будет достаточно для публикации в социальных сетях. Если что-то не
+        так — напишите Денисовой Маргарите.</span
+      >
+      <button class="btn btn-primary" id="dlAll">
+        <svg
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          viewBox="0 0 24 24"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Скачать все (оригиналы)
+      </button>
+    </div>
 
-<script type="module">
-import PhotoSwipeLightbox from 'https://unpkg.com/photoswipe@5/dist/photoswipe-lightbox.esm.min.js';
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div id="gallery" class="grid"></div>
 
-const LFS_BASE = 'https://media.githubusercontent.com/media/dimkadenisov/last-bell/main/clean';
-const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    <script type="module">
+      import PhotoSwipeLightbox from "https://unpkg.com/photoswipe@5/dist/photoswipe-lightbox.esm.min.js";
 
-const photos = await fetch('photos.json').then(r => r.json());
-document.getElementById('count').textContent = photos.length + ' photos';
+      const LFS_BASE =
+        "https://media.githubusercontent.com/media/dimkadenisov/last-bell/main/clean";
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-// Build grid
-const gallery = document.getElementById('gallery');
-for (const name of photos) {
-  const a = document.createElement('a');
-  a.href = 'preview/' + name;
-  a.dataset.pswpWidth = 6000;
-  a.dataset.pswpHeight = 4000;
-  a.dataset.cropped = true;
-  const img = document.createElement('img');
-  img.src = 'preview/' + name;
-  img.loading = 'lazy';
-  img.alt = name;
-  img.onload = img.onerror = () => img.classList.add('loaded');
-  a.appendChild(img);
-  gallery.appendChild(a);
-}
+      const photos = await fetch("photos.json").then((r) => r.json());
+      document.getElementById("count").textContent = photos.length + " photos";
 
-// PhotoSwipe
-const lightbox = new PhotoSwipeLightbox({
-  gallery: '#gallery',
-  children: 'a',
-  pswpModule: () => import('https://unpkg.com/photoswipe@5/dist/photoswipe.esm.min.js'),
-  padding: { top: 20, bottom: 20, left: 20, right: 20 },
-});
+      // Build grid
+      const gallery = document.getElementById("gallery");
+      for (const name of photos) {
+        const a = document.createElement("a");
+        a.href = "preview/" + name;
+        a.dataset.pswpWidth = 6000;
+        a.dataset.pswpHeight = 4000;
+        a.dataset.cropped = true;
+        const img = document.createElement("img");
+        img.src = "preview/" + name;
+        img.loading = "lazy";
+        img.alt = name;
+        img.onload = img.onerror = () => img.classList.add("loaded");
+        a.appendChild(img);
+        gallery.appendChild(a);
+      }
 
-lightbox.on('uiRegister', () => {
-  lightbox.pswp.ui.registerElement({
-    name: 'download-button',
-    order: 8,
-    isButton: true,
-    html: '<svg fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Скачать оригинал',
-    onClick: (e, el, pswp) => downloadPhoto(photos[pswp.currIndex]),
-  });
-});
+      // PhotoSwipe
+      const lightbox = new PhotoSwipeLightbox({
+        gallery: "#gallery",
+        children: "a",
+        pswpModule: () =>
+          import("https://unpkg.com/photoswipe@5/dist/photoswipe.esm.min.js"),
+        padding: { top: 20, bottom: 20, left: 20, right: 20 },
+      });
 
-lightbox.init();
+      lightbox.on("uiRegister", () => {
+        lightbox.pswp.ui.registerElement({
+          name: "download-button",
+          order: 8,
+          isButton: true,
+          html: '<svg fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Скачать оригинал',
+          onClick: (e, el, pswp) => downloadPhoto(photos[pswp.currIndex]),
+        });
+      });
 
-// Download single photo
-async function downloadPhoto(name) {
-  const url = LFS_BASE + '/' + name;
-  if (isIOS) {
-    window.open(url, '_blank');
-    showToast('Зажмите фото → «Сохранить в "Фото"»');
-    return;
-  }
-  const blob = await fetch(url).then(r => r.blob());
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: name,
-  });
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+      lightbox.init();
 
-// Download all as ZIP
-document.getElementById('dlAll').onclick = async () => {
-  const btn = document.getElementById('dlAll');
-  const bar = document.getElementById('progressBar');
-  const fill = document.getElementById('progressFill');
-  btn.disabled = true;
-  btn.textContent = 'Загрузка...';
-  bar.classList.add('active');
+      // Download single photo
+      async function downloadPhoto(name) {
+        const url = LFS_BASE + "/" + name;
+        if (isIOS) {
+          window.open(url, "_blank");
+          showToast('Зажмите фото → «Сохранить в "Фото"»');
+          return;
+        }
+        const blob = await fetch(url).then((r) => r.blob());
+        const a = Object.assign(document.createElement("a"), {
+          href: URL.createObjectURL(blob),
+          download: name,
+        });
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
 
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+      // Download all as ZIP
+      document.getElementById("dlAll").onclick = async () => {
+        const btn = document.getElementById("dlAll");
+        const bar = document.getElementById("progressBar");
+        const fill = document.getElementById("progressFill");
+        btn.disabled = true;
+        btn.textContent = "Загрузка...";
+        bar.classList.add("active");
 
-  const zip = new JSZip().folder('photos');
-  let done = 0;
-  await Promise.all(photos.map(async name => {
-    try { zip.file(name, await fetch(LFS_BASE + '/' + name).then(r => r.blob())); } catch {}
-    fill.style.width = (++done / photos.length * 100) + '%';
-  }));
+        await loadScript(
+          "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
+        );
 
-  btn.textContent = 'Создание ZIP...';
-  const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: 'photos.zip',
-  });
-  a.click();
-  URL.revokeObjectURL(a.href);
+        const zip = new JSZip().folder("photos");
+        let done = 0;
+        await Promise.all(
+          photos.map(async (name) => {
+            try {
+              zip.file(
+                name,
+                await fetch(LFS_BASE + "/" + name).then((r) => r.blob()),
+              );
+            } catch {}
+            fill.style.width = (++done / photos.length) * 100 + "%";
+          }),
+        );
 
-  btn.disabled = false;
-  btn.textContent = 'Скачать все (оригиналы)';
-  bar.classList.remove('active');
-  fill.style.width = '0%';
-};
+        btn.textContent = "Создание ZIP...";
+        const blob = await zip.generateAsync({
+          type: "blob",
+          compression: "STORE",
+        });
+        const a = Object.assign(document.createElement("a"), {
+          href: URL.createObjectURL(blob),
+          download: "photos.zip",
+        });
+        a.click();
+        URL.revokeObjectURL(a.href);
 
-function loadScript(src) {
-  return new Promise(resolve => {
-    const s = Object.assign(document.createElement('script'), { src, onload: resolve });
-    document.head.appendChild(s);
-  });
-}
+        btn.disabled = false;
+        btn.textContent = "Скачать все (оригиналы)";
+        bar.classList.remove("active");
+        fill.style.width = "0%";
+      };
 
-function showToast(msg) {
-  const t = Object.assign(document.createElement('div'), { textContent: msg, className: 'toast' });
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
-}
-</script>
-</body>
+      function loadScript(src) {
+        return new Promise((resolve) => {
+          const s = Object.assign(document.createElement("script"), {
+            src,
+            onload: resolve,
+          });
+          document.head.appendChild(s);
+        });
+      }
+
+      function showToast(msg) {
+        const t = Object.assign(document.createElement("div"), {
+          textContent: msg,
+          className: "toast",
+        });
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
+      }
+    </script>
+  </body>
 </html>
